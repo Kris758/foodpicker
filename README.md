@@ -72,23 +72,20 @@ The UI and `fetchRestaurants()` in `src/lib/dataProvider.ts` already route throu
 
 ## Deploying to GitHub Pages
 
-### 1. Base path
+### 1. Base path (blank page fix)
 
-GitHub Project Pages URLs look like `https://<user>.github.io/<repo>/`. Vite must know the repo segment.
+GitHub Project Pages serves your app at `https://<user>.github.io/<repo>/`. If the build uses Vite’s default absolute base `/`, the HTML will load but scripts are requested from `https://<user>.github.io/assets/...` instead of under `<repo>/` → **404 → white page**.
 
-**Option A — `.env.production` in the repo** (replace `foodpicker` if your repo name differs):
+**Default behavior:** production builds use a **relative** base (`./`) when `VITE_BASE_PATH` is unset or `/`, so `dist/index.html` references `./assets/...`, which resolves correctly on Project Pages and on `username.github.io` root sites. You usually **do not** need to set `VITE_BASE_PATH`.
+
+**Optional:** set an explicit subpath only if you want absolute URLs, e.g.:
 
 ```env
 VITE_BASE_PATH=/foodpicker/
 VITE_DATA_MODE=osm
 ```
 
-**Option B — GitHub Actions**  
-This repo includes `.github/workflows/deploy-pages.yml`, which sets:
-
-`VITE_BASE_PATH=/${{ github.event.repository.name }}/`
-
-so the base path tracks the repository name automatically.
+**GitHub Actions:** `.github/workflows/deploy-pages.yml` relies on this default (no `VITE_BASE_PATH` in the workflow).
 
 ### 2. Enable Pages
 
