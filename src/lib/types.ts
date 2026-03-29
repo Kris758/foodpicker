@@ -5,6 +5,8 @@ export interface Coordinates {
   lng: number;
 }
 
+export type PlaceSource = "openstreetmap" | "mock" | "api";
+
 export interface Restaurant {
   id: string;
   name: string;
@@ -18,9 +20,12 @@ export interface Restaurant {
   isOpen: boolean;
   url: string | null;
   coordinates: Coordinates;
+  /** OpenStreetMap tag pairs (e.g. cuisine=italian) when source is OSM */
+  tags?: string[];
+  source?: PlaceSource;
 }
 
-export type SortMode = "best" | "closest" | "topRated";
+export type SortMode = "best" | "closest" | "topRated" | "nameAsc";
 
 export interface SearchFilters {
   cuisine: string;

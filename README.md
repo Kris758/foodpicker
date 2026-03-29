@@ -1,13 +1,15 @@
 # Food Picker
 
-A static, mobile-friendly **Food Picker** dashboard built with **React**, **Vite**, **TypeScript**, and **Tailwind CSS**. It helps you discover nearby food spots using the browser **Geolocation API** or a **US ZIP code** (via [Zippopotam](https://api.zippopotam.us/), no API key). It runs entirely as a static site—ideal for **GitHub Pages** with no Node backend in production.
+A static, mobile-friendly **Food Picker** dashboard built with **React**, **Vite**, **TypeScript**, and **Tailwind CSS**. By default it loads nearby **restaurants, cafés, bars, and similar amenities** from **OpenStreetMap** using the **[Overpass API](https://wiki.openstreetmap.org/wiki/Overpass_API)** (browser `fetch`). **US ZIP codes** are geocoded with **[Nominatim](https://nominatim.org/)** (`postalcode` + `country=USA`). The app runs entirely as a static site—ideal for **GitHub Pages** with no Node backend in production.
+
+**Usage note:** Nominatim and public Overpass endpoints are shared community resources. Use the app lightly; for heavy traffic, run your own Overpass instance or proxy.
 
 ## Features
 
 - Polished landing flow: prompt for location, graceful fallback to ZIP
-- Mock demo dataset or pluggable **API** / **Yelp proxy** modes (see below)
-- Filters: cuisine keyword, minimum rating, price levels, open now
-- Sorting: best overall, closest, top rated
+- **Default:** live OSM data (Overpass) + Nominatim ZIP geocoding; optional **mock**, **API**, or **Yelp proxy** modes (see below)
+- Filters: cuisine keyword (matches name, category, OSM tags), minimum rating, price levels, open now
+- Sorting: best overall, closest, top rated, **A–Z**
 - “Can’t decide?” random pick with scroll and highlight
 - Favorites, recent ZIPs, grid/list views, dark mode (persisted locally)
 - Skeleton loading, empty states, and clear errors
@@ -21,18 +23,23 @@ npm run dev
 
 Open the URL shown in the terminal (usually `http://localhost:5173`).
 
-## Switching data mode (mock vs API vs Yelp proxy)
+## Switching data mode (OSM vs mock vs API vs Yelp proxy)
 
 Configuration is driven by environment variables (see `.env.example`). **Do not put secret API keys in the frontend**—use a serverless proxy you control if you need Yelp or other private credentials.
 
 | Variable | Purpose |
 |----------|---------|
-| `VITE_DATA_MODE` | `mock` (default), `api`, or `yelp-proxy` |
+| `VITE_DATA_MODE` | `osm` (**default**), `mock`, `api`, or `yelp-proxy` |
 | `VITE_RESTAURANTS_API_URL` | Base URL for `api` mode (see response shape below) |
 | `VITE_YELP_PROXY_URL` | Base URL for `yelp-proxy` mode (your serverless facade) |
 | `VITE_API_AUTH_HEADER` | Optional header, e.g. `Authorization: Bearer <token>` if your proxy requires it (prefer cookies / server-side auth when possible) |
 
-Example `.env.local`:
+Implementation details for `osm`:
+
+- **ZIP → coordinates:** `src/lib/geocode.ts` → Nominatim `search?postalcode=…&country=USA&format=json`
+- **Nearby places:** `src/lib/overpass.ts` → Overpass `interpreter` with amenities `restaurant`, `cafe`, `fast_food`, `bar`, `pub`, `food_court`; normalization in `src/lib/normalizePlace.ts`
+
+Example `.env.local` (offline demo without calling Overpass/Nominatim):
 
 ```env
 VITE_DATA_MODE=mock
@@ -73,7 +80,7 @@ GitHub Project Pages URLs look like `https://<user>.github.io/<repo>/`. Vite mus
 
 ```env
 VITE_BASE_PATH=/foodpicker/
-VITE_DATA_MODE=mock
+VITE_DATA_MODE=osm
 ```
 
 **Option B — GitHub Actions**  
@@ -115,10 +122,12 @@ The app is a single page (`index.html` + client bundle). No client-side router i
 | `src/components/FavoritesPanel.tsx` | Saved spots |
 | `src/lib/types.ts` | Shared TypeScript types |
 | `src/lib/config.ts` | Env-driven app config |
-| `src/lib/dataProvider.ts` | Mock / API / Yelp-proxy providers |
+| `src/lib/dataProvider.ts` | OSM / mock / API / Yelp-proxy providers |
+| `src/lib/overpass.ts` | Overpass API client for nearby amenities |
+| `src/lib/normalizePlace.ts` | Overpass elements → `Restaurant` |
 | `src/lib/mockData.ts` | Demo restaurants |
 | `src/lib/location.ts` | Geolocation helpers |
-| `src/lib/geocode.ts` | ZIP → coordinates |
+| `src/lib/geocode.ts` | ZIP → coordinates (Nominatim) |
 | `src/lib/utils.ts` | `cn`, haversine distance, maps URL, storage helpers |
 
 ## Scripts

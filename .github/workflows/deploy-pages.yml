@@ -27,7 +27,7 @@ jobs:
       - name: Build
         env:
           VITE_BASE_PATH: /${{ github.event.repository.name }}/
-          VITE_DATA_MODE: mock
+          VITE_DATA_MODE: osm
         run: npm run build
       - uses: actions/upload-pages-artifact@v3
         with:

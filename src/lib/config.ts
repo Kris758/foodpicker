@@ -1,8 +1,9 @@
-export type DataMode = "mock" | "api" | "yelp-proxy";
+export type DataMode = "osm" | "mock" | "api" | "yelp-proxy";
 
 function parseDataMode(value: string | undefined): DataMode {
-  if (value === "api" || value === "yelp-proxy") return value;
-  return "mock";
+  if (value === "mock" || value === "api" || value === "yelp-proxy") return value;
+  if (value === "osm" || value === undefined || value === "") return "osm";
+  return "osm";
 }
 
 export const appConfig = {

@@ -273,6 +273,7 @@ export function getMockRestaurantsNear(origin: Coordinates): Restaurant[] {
     .map((s) => ({
       ...s,
       distance: haversineQuick(origin, s.coordinates),
+      source: "mock" as const,
     }))
     .sort((a, b) => a.distance - b.distance);
 }

@@ -57,11 +57,12 @@ function applyFilters(list: Restaurant[], f: SearchFilters): Restaurant[] {
     }
     if (f.cuisine.trim()) {
       const q = f.cuisine.trim().toLowerCase();
-      if (
-        !r.category.toLowerCase().includes(q) &&
-        !r.name.toLowerCase().includes(q)
-      )
-        return false;
+      const inCore =
+        r.category.toLowerCase().includes(q) ||
+        r.name.toLowerCase().includes(q);
+      const inTags =
+        r.tags?.some((t) => t.toLowerCase().includes(q)) ?? false;
+      if (!inCore && !inTags) return false;
     }
     return true;
   });
@@ -71,12 +72,20 @@ function sortList(list: Restaurant[], sort: SortMode): Restaurant[] {
   const copy = [...list];
   if (sort === "closest") {
     copy.sort((a, b) => a.distance - b.distance);
+  } else if (sort === "nameAsc") {
+    copy.sort((a, b) =>
+      a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
+    );
   } else if (sort === "topRated") {
-    copy.sort((a, b) => b.rating - a.rating);
+    copy.sort((a, b) => {
+      if (b.rating !== a.rating) return b.rating - a.rating;
+      return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+    });
   } else {
     copy.sort((a, b) => {
       const sa = a.rating * Math.log10(a.reviewCount + 10);
       const sb = b.rating * Math.log10(b.reviewCount + 10);
+      if (sa === 0 && sb === 0) return a.distance - b.distance;
       return sb - sa;
     });
   }
@@ -141,7 +150,9 @@ export default function App() {
   };
 
   const cuisineForApi =
-    appConfig.dataMode !== "mock" ? debouncedCuisine.trim() || undefined : undefined;
+    appConfig.dataMode === "api" || appConfig.dataMode === "yelp-proxy"
+      ? debouncedCuisine.trim() || undefined
+      : undefined;
 
   useEffect(() => {
     if (!coords) return;
@@ -232,11 +243,13 @@ export default function App() {
   };
 
   const dataModeLabel =
-    appConfig.dataMode === "mock"
-      ? "Demo data"
-      : appConfig.dataMode === "api"
-        ? "API"
-        : "Yelp proxy";
+    appConfig.dataMode === "osm"
+      ? "OpenStreetMap"
+      : appConfig.dataMode === "mock"
+        ? "Demo data"
+        : appConfig.dataMode === "api"
+          ? "API"
+          : "Yelp proxy";
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/40">
@@ -407,7 +420,10 @@ export default function App() {
                   {fetchError}
                 </p>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Check your connection or switch to demo mode in config.
+                  Check your connection. If Overpass or Nominatim is blocking
+                  requests, set{" "}
+                  <code className="rounded bg-muted px-1">VITE_DATA_MODE=mock</code>{" "}
+                  for offline demo data.
                 </p>
               </div>
             ) : null}

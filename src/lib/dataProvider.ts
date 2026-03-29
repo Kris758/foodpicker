@@ -1,7 +1,11 @@
 import { appConfig } from "./config";
 import { getMockRestaurantsNear } from "./mockData";
+import { normalizeOverpassResults } from "./normalizePlace";
+import { fetchNearbyFoodFromOverpass } from "./overpass";
 import type { Coordinates, Restaurant } from "./types";
 import { haversineMiles } from "./utils";
+
+const OSM_MAX_RESULTS = 80;
 
 export interface FetchRestaurantsOptions {
   coordinates: Coordinates;
@@ -11,7 +15,7 @@ export interface FetchRestaurantsOptions {
 }
 
 /**
- * Pluggable entry: mock | generic REST API | Yelp proxy URL.
+ * Pluggable entry: osm (default) | mock | generic REST API | Yelp proxy.
  * API responses must be JSON arrays of normalized Restaurant objects (see README).
  */
 export async function fetchRestaurants(
@@ -20,6 +24,8 @@ export async function fetchRestaurants(
   const { coordinates, cuisine, radiusMiles = 8, signal } = opts;
 
   switch (appConfig.dataMode) {
+    case "osm":
+      return fetchOsm(coordinates, radiusMiles, signal);
     case "mock":
       return fetchMock(coordinates, cuisine, radiusMiles);
     case "api":
@@ -27,8 +33,26 @@ export async function fetchRestaurants(
     case "yelp-proxy":
       return fetchYelpProxy(coordinates, cuisine, radiusMiles, signal);
     default:
-      return fetchMock(coordinates, cuisine, radiusMiles);
+      return fetchOsm(coordinates, radiusMiles, signal);
   }
+}
+
+async function fetchOsm(
+  coordinates: Coordinates,
+  radiusMiles: number,
+  signal?: AbortSignal
+): Promise<Restaurant[]> {
+  const radiusMeters = Math.min(
+    Math.max(Math.round(radiusMiles * 1609.344), 800),
+    25_000
+  );
+  const elements = await fetchNearbyFoodFromOverpass(
+    coordinates.lat,
+    coordinates.lng,
+    radiusMeters,
+    signal
+  );
+  return normalizeOverpassResults(elements, coordinates, OSM_MAX_RESULTS);
 }
 
 function fetchMock(
@@ -147,6 +171,7 @@ function normalizeOne(item: unknown, origin: Coordinates): Restaurant | null {
     isOpen: Boolean(o.isOpen ?? o.is_open ?? true),
     url: o.url != null ? String(o.url) : null,
     coordinates,
+    source: "api",
   };
 }
 

@@ -46,6 +46,7 @@ export function FilterBar({
               ["best", "Best overall"],
               ["closest", "Closest"],
               ["topRated", "Top rated"],
+              ["nameAsc", "A–Z"],
             ] as const
           ).map(([key, label]) => (
             <Button
